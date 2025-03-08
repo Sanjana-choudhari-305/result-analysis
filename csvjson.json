@@ -1,0 +1,22 @@
+[
+  {
+    "SI NO": 1,
+    "Name": "Sanjana",
+    "Maths": 98,
+    "DSA": 86,
+    "DSA lab": 98,
+    "Ds dco": 78,
+    "OS": 72,
+    "JAVA": 72
+  },
+  {
+    "SI NO": 2,
+    "Name": "Shrisha",
+    "Maths": 100,
+    "DSA": 97,
+    "DSA lab": 69,
+    "Ds dco": 96,
+    "OS": 98,
+    "JAVA": 99
+  }
+]
