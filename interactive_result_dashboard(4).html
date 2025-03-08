@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Result Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 95%;
+            margin: auto;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            height: 500px;
+        }
+        .graph-container {
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: white;
+            padding: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: left 0.5s ease-in-out;
+        }
+        .graph-container.active {
+            left: 0;
+        }
+        #fileInput {
+            margin-bottom: 20px;
+        }
+        .nav-buttons {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Result Performance Dashboard</h1>
+    <input type="file" id="fileInput" accept="application/json">
+    
+    <div class="container">
+        <div class="graph-container active" id="barChart"></div>
+        <div class="graph-container" id="lineChart"></div>
+        <div class="graph-container" id="pieChart"></div>
+        <div class="graph-container" id="groupedBarChart"></div>
+        <div class="graph-container" id="heatmap"></div>
+    </div>
+    
+    <div class="nav-buttons">
+        <button id="prevBtn">Previous</button>
+        <button id="nextBtn">Next</button>
+    </div>
+
+    <script>
+        let data = [];
+        let currentIndex = 0;
+        let charts = ["barChart", "lineChart", "pieChart", "groupedBarChart", "heatmap"];
+        
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            let file = event.target.files[0];
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                data = JSON.parse(e.target.result);
+                generateDashboard();
+            };
+            reader.readAsText(file);
+        });
+
+        function generateDashboard() {
+            let subjects = Object.keys(data[0]).slice(2);
+            let studentNames = data.map(d => d.Name);
+            let subjectAverages = subjects.map(subject => 
+                data.reduce((sum, d) => sum + d[subject], 0) / data.length
+            );
+            
+            let topScores = subjects.map(subject => Math.max(...data.map(d => d[subject])));
+            let lowScores = subjects.map(subject => Math.min(...data.map(d => d[subject])));
+            
+            let totalScores = data.map(d => ({ Name: d.Name, Total: subjects.reduce((sum, sub) => sum + d[sub], 0) }));
+            totalScores.sort((a, b) => b.Total - a.Total);
+
+            // Bar Chart - Student-wise Performance
+            let traces = data.map(student => ({
+                x: subjects,
+                y: subjects.map(sub => student[sub]),
+                type: 'bar',
+                name: student.Name
+            }));
+            Plotly.newPlot('barChart', traces, { title: 'Student-wise Performance' });
+
+            // Line Chart - Subject-wise Averages
+            Plotly.newPlot('lineChart', [{ x: subjects, y: subjectAverages, type: 'scatter', mode: 'lines+markers' }], { title: 'Subject-wise Average Score' });
+
+            // Pie Chart - Performance Distribution
+            let categories = ["Excellent (90+)", "Good (70-89)", "Needs Improvement (<70)"];
+            let counts = [0, 0, 0];
+            totalScores.forEach(student => {
+                if (student.Total / subjects.length >= 90) counts[0]++;
+                else if (student.Total / subjects.length >= 70) counts[1]++;
+                else counts[2]++;
+            });
+            Plotly.newPlot('pieChart', [{ labels: categories, values: counts, type: 'pie' }], { title: 'Rank-wise Student Distribution' });
+
+            // Grouped Bar Chart - Highest & Lowest Scores
+            Plotly.newPlot('groupedBarChart', [
+                { x: subjects, y: topScores, type: 'bar', name: 'Highest' },
+                { x: subjects, y: lowScores, type: 'bar', name: 'Lowest' }
+            ], { title: 'Highest & Lowest Scorers per Subject' });
+
+            // Heatmap Table - Overall Student Ranking
+            Plotly.newPlot('heatmap', [{
+                x: totalScores.map(d => d.Name),
+                y: ['Total Score'],
+                z: [totalScores.map(d => d.Total)],
+                type: 'heatmap',
+                colorscale: 'Blues'
+            }], { title: 'Overall Student Ranking' });
+        }
+
+        function updateChart(nextIndex) {
+            document.getElementById(charts[currentIndex]).classList.remove('active');
+            document.getElementById(charts[nextIndex]).classList.add('active');
+            currentIndex = nextIndex;
+        }
+
+        document.getElementById('prevBtn').addEventListener('click', function() {
+            let nextIndex = (currentIndex - 1 + charts.length) % charts.length;
+            updateChart(nextIndex);
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            let nextIndex = (currentIndex + 1) % charts.length;
+            updateChart(nextIndex);
+        });
+    </script>
+</body>
+</html>
